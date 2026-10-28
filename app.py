@@ -10,7 +10,9 @@ st.markdown(
     """
     <style>
       header[data-testid="stHeader"] { display: none; }
-      .block-container { padding: 0.5rem 0.5rem 0 0.5rem; max-width: 100%; }
+      .stApp { background: #e8ebf1; }
+      .block-container { padding: 0 !important; max-width: 100%; }
+      iframe { border: 0; }
     </style>
     """,
     unsafe_allow_html=True,

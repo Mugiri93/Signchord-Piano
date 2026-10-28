@@ -4,120 +4,304 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SignChord Piano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#10131a; --fg:#f4f6fb; --muted:#9aa3b5; --card:#1a1f2b; }
+  /* Warna: gading dan eboni seperti tuts piano. Hanya warna chord yang jenuh, karena warna adalah informasi utamanya. */
+  :root {
+    --bg:#e8ebf1; --paper:#ffffff; --ink:#11151f; --slate:#586075; --rule:#d4d9e4;
+    --ebony:#11151f; --ebony2:#1b2130; --ebony3:#2a3246; --focus:#1d4ed8;
+    --fg:#f3f5fb;            /* dipakai skrip untuk teks di atas permukaan gelap */
+    --muted:#586075;
+    --display:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;
+    --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme: light;
+  }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:14px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  h1 { font-size:1.3rem; margin:0; flex:1; min-width:240px; }
-  button { font-size:1.05rem; padding:12px 20px; border-radius:12px; border:0; cursor:pointer;
-           background:#3b82f6; color:#fff; font-weight:600; }
-  button.alt { background:#2a3142; }
-  button:disabled { opacity:.5; cursor:not-allowed; }
-  main { display:grid; grid-template-columns: minmax(300px,1fr) minmax(300px,1fr); gap:16px; padding:0 20px 20px; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  .card { background:var(--card); border-radius:16px; padding:14px; }
-  .cam { position:relative; }
-  video, canvas.overlay { width:100%; border-radius:12px; display:block; transform: scaleX(-1); background:#000; }
-  canvas.overlay { position:absolute; inset:0; height:100%; }
-  .pitchRow { display:flex; gap:10px; align-items:stretch; }
-  #chordBig { flex:1; min-width:0; min-height:200px; display:flex; flex-direction:column; align-items:center;
-              justify-content:center; text-align:center; padding:14px; font-weight:800; overflow:hidden;
-              border-radius:16px; transition: background .12s, transform .12s; background:#222a3a; }
-  #chordBig.pulse { transform: scale(var(--pulse, 1.05)); }
-  #chordName { font-size: clamp(3rem, 12vw, 6.5rem); line-height:1.05; transition: transform .25s; }
-  #chordName[data-z="0"] { transform: translateY(18px); }
-  #chordName[data-z="2"] { transform: translateY(-18px); }
-  #chordReg { font-size:.95rem; letter-spacing:.03em; margin-top:14px; min-height:1.2em; }
-  #hMeter { position:relative; z-index:2; flex:none; width:74px; border-radius:14px; overflow:hidden; background:#222a3a;
-            display:flex; flex-direction:column; }
-  #hMeter .band { flex:1; display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:800;
-                  color:var(--muted); border-bottom:1px solid #10131a; transition: background .15s, color .15s; }
-  #hMeter .band:nth-child(3) { border-bottom:0; }
-  #hMeter .band.live { box-shadow: inset 0 0 0 2px #fff; }
-  #hMeter .band.on { background:var(--hl, #3b82f6); color:#10131a; }
-  #hDot { position:absolute; left:8px; right:8px; height:10px; border-radius:5px; background:#fff; opacity:0;
-          transform:translateY(-50%); box-shadow:0 0 8px #fff; pointer-events:none; }
-  .cap { color:var(--muted); font-size:.8rem; margin-top:4px; }
-  .bar { height:10px; border-radius:5px; background:#2a3142; overflow:hidden; margin-top:4px; }
-  .bar i { display:block; height:100%; width:0; background:#facc15; transition: width .08s linear; }
-  #chordNotes { text-align:center; color:var(--muted); font-size:1.1rem; min-height:1.5em; }
-  #status { text-align:center; margin-top:6px; color:var(--muted); min-height:1.4em; }
-  #piano { position:relative; display:flex; height:130px; margin-top:12px; }
-  .key { flex:1; background:#f4f6fb; border:1px solid #333; border-radius:0 0 8px 8px; position:relative; transition: background .1s; }
-  .key.on { background:var(--hl, #3b82f6); }
-  .key span { position:absolute; bottom:6px; width:100%; text-align:center; color:#222; font-size:.8rem; }
-  .key.black { position:absolute; top:0; width:8.5%; height:62%; flex:none; background:#1a1f2b; border:1px solid #000;
-               border-radius:0 0 6px 6px; z-index:2; }
-  .key.black.on { background:var(--hl, #3b82f6); }
-  canvas#wave { width:100%; height:90px; background:#0c0f15; border-radius:12px; margin-top:12px; }
-  table { width:100%; border-collapse:collapse; font-size:1rem; }
-  td, th { padding:6px 4px; text-align:left; border-bottom:1px solid #2a3142; }
-  .legendTitle { font-size:.9rem; color:var(--muted); margin-top:12px; }
-  .legendRow { display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin-top:6px; }
-  .legendRow div { padding:8px 2px; border-radius:10px; text-align:center; color:#10131a; line-height:1.2; }
-  .legendRow b { display:block; font-size:1.1rem; }
-  .legendRow small { font-size:.75rem; }
-  label { color:var(--muted); }
+  [hidden] { display:none !important; }
+  html { background:var(--bg); }
+  body { margin:0; font-family:var(--body); font-size:16px; line-height:1.5; color:var(--ink); background:var(--bg);
+         -webkit-font-smoothing:antialiased; }
+  /* Pita warna chord di tepi atas halaman */
+  body::before { content:""; display:block; height:6px;
+    background:linear-gradient(90deg,#f87171 0 10%,#fb923c 10% 20%,#facc15 20% 30%,#a3e635 30% 40%,#34d399 40% 50%,
+                               #22d3ee 50% 60%,#60a5fa 60% 70%,#818cf8 70% 80%,#a78bfa 80% 90%,#f472b6 90% 100%); }
+  :focus-visible { outline:3px solid var(--focus); outline-offset:2px; border-radius:6px; }
+
+  /* Kepala halaman */
+  .top { max-width:1400px; margin:0 auto; padding:22px 28px 10px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .brand { display:flex; align-items:center; gap:14px; flex:1; min-width:250px; }
+  .mark { width:46px; height:46px; flex:none; }
+  h1 { font-family:var(--display); font-weight:800; font-size:1.7rem; line-height:1; letter-spacing:-.02em; margin:0; }
+  .brand p { margin:4px 0 0; color:var(--slate); font-size:.95rem; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* Tombol */
+  button { font:inherit; font-weight:700; font-size:1rem; padding:12px 22px; border-radius:14px; border:2px solid var(--ink);
+           cursor:pointer; background:var(--ink); color:var(--fg); transition:transform .12s, background .12s, color .12s; }
+  button:hover:not(:disabled) { transform:translateY(-1px); }
+  button:active:not(:disabled) { transform:none; }
+  button.alt { background:transparent; color:var(--ink); }
+  button.alt:hover:not(:disabled) { background:var(--ink); color:var(--fg); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* Tata letak */
+  main { max-width:1400px; margin:0 auto; padding:10px 28px 56px; display:grid;
+         grid-template-columns:minmax(360px,7fr) minmax(340px,5fr); gap:22px; align-items:start; }
+  @media (max-width: 920px) { main { grid-template-columns:1fr; padding:10px 14px 40px; } .top { padding:18px 14px 6px; } }
+  .card { background:var(--paper); border:1px solid var(--rule); border-radius:24px; padding:22px; }
+  h2 { font-family:var(--display); font-weight:800; font-size:1.15rem; letter-spacing:-.01em; margin:0 0 14px; }
+
+  /* Kamera */
+  .cam { position:relative; border-radius:18px; overflow:hidden; width:100%; aspect-ratio:4/3; background:var(--ebony); }
+  .cam::before { content:"Kamera belum aktif"; position:absolute; inset:0; display:grid; place-items:center; padding-bottom:40px;
+                 color:#8c97b0; font-weight:700; letter-spacing:.01em;
+                 background:repeating-linear-gradient(135deg,#141a28 0 16px,#171e2e 16px 32px); }
+  video, canvas.overlay { width:100%; display:block; transform:scaleX(-1); background:transparent; position:relative; z-index:1; }
+  canvas.overlay { position:absolute; inset:0; height:100%; z-index:2; }
+  #status { position:absolute; left:12px; right:12px; bottom:12px; z-index:3; text-align:center; padding:9px 14px;
+            border-radius:12px; background:rgba(17,21,31,.82); color:var(--fg); font-size:.92rem; font-weight:700; }
+
+  /* Pengaturan */
+  .settings { display:grid; gap:14px; margin-top:18px; }
+  .toggles { display:flex; flex-wrap:wrap; gap:8px; }
+  .switch { display:flex; align-items:center; gap:10px; padding:9px 14px 9px 10px; border-radius:999px; background:var(--bg);
+            border:1px solid var(--rule); cursor:pointer; font-size:.92rem; font-weight:700; user-select:none; position:relative; }
+  .switch input { position:absolute; opacity:0; pointer-events:none; }
+  .sw { flex:none; width:38px; height:22px; border-radius:999px; background:#9aa3b8; position:relative; transition:background .18s; }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff;
+               transition:transform .18s; }
+  .switch input:checked + .sw { background:var(--ink); }
+  .switch input:checked + .sw::after { transform:translateX(16px); }
+  .switch:has(input:focus-visible) { outline:3px solid var(--focus); outline-offset:2px; }
+  .field label { display:flex; justify-content:space-between; gap:10px; font-weight:700; font-size:.95rem; }
+  .field label span, .field label b { font-family:var(--display); font-weight:800; }
+  input[type=range] { width:100%; height:30px; accent-color:var(--ink); margin:4px 0 0; }
+  .bar { height:12px; border-radius:6px; background:var(--bg); overflow:hidden; margin-top:8px; border:1px solid var(--rule); }
+  .bar i { display:block; height:100%; width:0; background:var(--ink); border-radius:6px; transition:width .08s linear; }
+  #calMsg { color:var(--slate); min-height:1.4em; font-size:.92rem; }
+  #calBtn { width:100%; }
+
+  /* Panggung chord */
+  .pitchRow { display:flex; gap:12px; align-items:stretch; }
+  #chordBig { flex:1; min-width:0; min-height:270px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+              text-align:center; padding:16px; font-weight:800; overflow:hidden; border-radius:22px;
+              background:var(--ebony2); color:var(--fg); transition:background .12s, transform .12s; }
+  #chordBig.pulse { transform:scale(var(--pulse, 1.05)); }
+  #chordName { font-family:var(--display); font-weight:800; font-size:clamp(4rem,13vw,8rem); line-height:1; letter-spacing:-.03em;
+               transition:transform .25s; }
+  #chordName[data-z="0"] { transform:translateY(18px); }
+  #chordName[data-z="2"] { transform:translateY(-18px); }
+  #chordReg { font-size:.98rem; font-weight:700; margin-top:16px; min-height:1.3em; }
+  #hMeter { position:relative; z-index:2; flex:none; width:78px; border-radius:18px; overflow:hidden; background:var(--ebony);
+            display:flex; flex-direction:column; gap:4px; padding:4px; }
+  #hMeter .band { flex:1; display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700;
+                  color:#a2adc4; background:var(--ebony3); border-radius:14px; transition:background .15s, color .15s; }
+  #hMeter .band.live { box-shadow:inset 0 0 0 2px #fff; }
+  #hMeter .band.on { background:var(--hl, #8b9cff); color:#10131a; }
+  #hDot { position:absolute; left:10px; right:10px; height:10px; border-radius:5px; background:#fff; opacity:0;
+          transform:translateY(-50%); box-shadow:0 0 0 2px var(--ebony); pointer-events:none; }
+  #chordNotes { color:var(--slate); font-size:1.02rem; font-weight:700; min-height:1.6em; margin:12px 2px 0; }
+  .shell { margin-top:12px; padding:12px 12px 0; border-radius:20px; background:var(--ebony); }
+  #piano { position:relative; display:flex; height:136px; }
+  .key { flex:1; background:linear-gradient(#ffffff,#e6eaf3); border:1px solid #2a3246; border-radius:0 0 10px 10px;
+         position:relative; transition:background .1s; }
+  .key.on { background:var(--hl, #8b9cff); }
+  .key span { position:absolute; bottom:8px; width:100%; text-align:center; color:#586075; font-size:.82rem; font-weight:700; }
+  .key.on span { color:#10131a; }
+  .key.black { position:absolute; top:0; width:8.5%; height:62%; flex:none; background:linear-gradient(#2b3347,#0b0e16);
+               border:1px solid #000; border-radius:0 0 7px 7px; z-index:2; }
+  .key.black.on { background:var(--hl, #8b9cff); }
+  canvas#wave { width:100%; height:100px; background:var(--ebony); border-radius:18px; margin-top:12px; display:block; }
+  .cap { color:var(--slate); font-size:.88rem; margin-top:8px; }
+
+  /* Peta gestur */
+  .legends { margin-top:26px; padding-top:20px; border-top:1px solid var(--rule); }
+  .legendTitle { font-weight:700; font-size:.95rem; margin-top:14px; }
+  .legendTitle:first-of-type { margin-top:0; }
+  .legendRow { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:8px; }
+  .legendRow div { padding:11px 4px; border-radius:14px; text-align:center; color:#10131a; line-height:1.2;
+                   box-shadow:inset 0 -4px 0 rgba(0,0,0,.14); transition:transform .15s; }
+  .legendRow b { display:block; font-family:var(--display); font-weight:800; font-size:1.3rem; }
+  .legendRow small { font-size:.78rem; font-weight:700; }
+  .legendRow div.target { outline:3px solid var(--ink); outline-offset:2px; transform:translateY(-3px) scale(1.06); }
+  .how { margin-top:20px; border-top:1px solid var(--rule); padding-top:14px; }
+  .how summary { cursor:pointer; font-weight:700; }
+  .how p { color:var(--slate); max-width:68ch; margin:10px 0 0; }
+  .how b { color:var(--ink); }
+  .quick { color:var(--slate); font-size:.95rem; margin:16px 0 0; }
+
+  /* Mode latihan: panel gelap seperti ruang studio */
+  #practiceCard { grid-column:1 / -1; background:var(--ebony); color:var(--fg); border-color:var(--ebony); }
+  #practiceCard h2 { color:var(--fg); }
+  #practiceCard button:not(.alt) { background:var(--fg); color:var(--ink); border-color:var(--fg); }
+  #practiceCard button.alt { color:var(--fg); border-color:#4a5572; }
+  #practiceCard button.alt:hover:not(:disabled) { background:var(--fg); color:var(--ink); }
+  .prTop { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .prTop select { flex:1; min-width:200px; }
+  select { font:inherit; font-weight:700; font-size:1rem; padding:12px 14px; border-radius:14px; border:2px solid #4a5572;
+           background:var(--ebony2); color:var(--fg); }
+  #prInfo { margin-top:10px; color:#a2adc4; font-size:.92rem; }
+  #prSections { display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; }
+  .sec { padding:5px 13px; border-radius:999px; font-size:.86rem; font-weight:700; background:var(--ebony2); color:#a2adc4; }
+  .sec.done { opacity:.4; text-decoration:line-through; }
+  .sec.cur { background:var(--fg); color:var(--ink); }
+  .prStage { display:flex; gap:16px; align-items:stretch; margin-top:16px; flex-wrap:wrap; }
+  #prBig { min-width:170px; padding:18px 28px; border-radius:24px; background:#222a3a; color:var(--fg); font-family:var(--display);
+           font-weight:800; font-size:clamp(3.4rem,11vw,6rem); letter-spacing:-.03em; text-align:center; line-height:1.05;
+           display:flex; align-items:center; justify-content:center; }
+  #prDetail { flex:1; min-width:210px; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .lbl { font-size:.88rem; font-weight:700; color:#a2adc4; }
+  #prHow { font-family:var(--display); font-size:1.5rem; font-weight:800; line-height:1.15; }
+  #prDots { display:flex; gap:8px; }
+  .dot { width:22px; height:22px; border-radius:50%; background:var(--ebony3); border:2px solid #4a5572; }
+  .dot.on { border-color:#fff9; }
+  #prNotes { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .npill { padding:3px 13px; border-radius:9px; background:var(--ebony3); font-weight:700; font-size:1.05rem; }
+  #prSide { color:#a2adc4; font-size:.95rem; }
+  #prNext { min-width:140px; padding:14px; border-radius:20px; background:var(--ebony2); display:flex; flex-direction:column;
+            justify-content:center; align-items:center; gap:8px; text-align:center; }
+  #prNextChord { font-family:var(--display); font-size:2.1rem; font-weight:800; padding:2px 20px; border-radius:14px;
+                 background:var(--ebony3); color:var(--fg); }
+  #prNextHow { font-size:.86rem; color:#a2adc4; }
+  #prChips { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:16px; min-height:44px; }
+  .chip { padding:7px 14px; border-radius:11px; color:#10131a; font-weight:800; transition:transform .15s; }
+  .chip.done { opacity:.3; }
+  .chip.cur { outline:3px solid #fff; outline-offset:1px; transform:scale(1.15); margin:0 6px; }
+  .prStats { display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; color:#a2adc4; }
+  .prStats b { color:var(--fg); font-family:var(--display); font-size:1.15rem; }
+  #practiceCard .bar { background:var(--ebony2); border-color:#2a3246; }
+  #practiceCard .bar i { background:var(--fg); }
+  #prMsg { margin-top:14px; padding:11px 15px; border-radius:14px; font-weight:700; }
+  #prMsg:empty { display:none; }
+  #prMsg.ok { background:#34d39926; border:1px solid #34d39988; color:#7ff0c2; }
+  #prMsg.bad { background:#fb923c26; border:1px solid #fb923c88; color:#fdba74; }
+  @keyframes pop { 0% { transform:scale(.88); } 60% { transform:scale(1.1); } 100% { transform:scale(1); } }
+  @keyframes shake { 0%,100% { transform:translateX(0); } 20% { transform:translateX(-9px); } 40% { transform:translateX(9px); } 60% { transform:translateX(-6px); } 80% { transform:translateX(6px); } }
+  .pop { animation:pop .35s ease-out; }
+  .shake { animation:shake .35s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>SignChord Piano Mainkan Chord Dengan Dua Tangan</h1>
-  <button id="startBtn">Mulai Kamera</button>
+<header class="top">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 46 46" aria-hidden="true">
+      <rect width="46" height="46" rx="13" fill="#11151f"/>
+      <rect x="9"  y="12" width="5" height="22" rx="2.5" fill="#f87171"/>
+      <rect x="16" y="17" width="5" height="17" rx="2.5" fill="#fb923c"/>
+      <rect x="23" y="9"  width="5" height="25" rx="2.5" fill="#34d399"/>
+      <rect x="30" y="15" width="5" height="19" rx="2.5" fill="#818cf8"/>
+      <rect x="9" y="37" width="26" height="2.5" rx="1.25" fill="#f3f5fb"/>
+    </svg>
+    <div>
+      <h1>SignChord Piano</h1>
+      <p>Mainkan chord dengan dua tangan. Warna, cahaya, dan getar menggantikan bunyi.</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="startBtn">Mulai Kamera</button>
+    <button id="practiceBtn" class="alt">Mode Latihan</button>
+  </div>
 </header>
 
 <main>
-  <section class="card">
-    <div class="cam">
-      <video id="video" playsinline muted></video>
-      <canvas id="overlay" class="overlay"></canvas>
+  <section class="card" id="practiceCard" hidden>
+    <h2>Mode latihan</h2>
+    <div class="prTop">
+      <select id="songSel" aria-label="Pilih lagu"></select>
+      <button id="prStart">Mulai latihan</button>
+      <button id="prStop" class="alt">Berhenti</button>
     </div>
-    <div id="status">Tekan "Mulai Kamera" lalu izinkan akses kamera.</div>
-    <div style="margin-top:10px">
-      <label><input type="checkbox" id="vibToggle" checked> Getar (HP)</label>
-      &nbsp;
-      <label><input type="checkbox" id="soundToggle" checked> Bunyi (untuk pendamping)</label>
-      &nbsp;
-      <label><input type="checkbox" id="swapHands" checked> Tukar kiri/kanan</label>
-      &nbsp;
-      <label><input type="checkbox" id="speedToggle" checked> Keras/lembut dari kecepatan angkat</label>
+    <div id="prInfo" class="cap"></div>
+    <div id="prSections"></div>
+    <div class="prStage" id="prTarget">
+      <div id="prBig">—</div>
+      <div id="prDetail">
+        <div class="lbl">Tekan sekarang</div>
+        <div id="prHow">Pilih lagu lalu tekan "Mulai latihan".</div>
+        <div id="prDots"></div>
+        <div id="prNotes"></div>
+        <div id="prSide"></div>
+      </div>
+      <div id="prNext">
+        <div class="lbl">Berikutnya</div>
+        <div id="prNextChord">—</div>
+        <div id="prNextHow"></div>
+      </div>
     </div>
-    <div style="margin-top:8px">
-      <label>Waktu Tahan Gestur: <span id="holdVal">250</span> ms</label>
-      <input type="range" id="hold" min="100" max="900" value="250" step="50" style="width:100%">
+    <div id="prChips"></div>
+    <div class="prStats">
+      <span>Benar <b id="prHit">0</b></span><span>Salah <b id="prMiss">0</b></span><span>Ketepatan <b id="prAcc">–</b></span>
+      <span style="margin-left:auto"><b id="prStep">0</b></span>
     </div>
-    <div style="margin-top:10px">
-      <label>Kecepatan angkat tangan: <b id="spdTxt" style="font-weight:600;color:var(--fg)">–</b></label>
-      <div class="bar"><i id="spdBar"></i></div>
-    </div>
-    <button id="calBtn" class="alt" disabled style="margin-top:12px;width:100%">Atur tinggi tangan (kalibrasi)</button>
-    <div id="calMsg" style="color:var(--muted);margin-top:6px;min-height:1.3em"></div>
+    <div class="bar"><i id="prBar"></i></div>
+    <div id="prMsg"></div>
   </section>
 
   <section class="card">
+    <h2>Kamera</h2>
+    <div class="cam">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay" class="overlay"></canvas>
+      <div id="status">Tekan "Mulai Kamera" lalu izinkan akses kamera.</div>
+    </div>
+    <div class="settings">
+      <div class="toggles">
+        <label class="switch"><input type="checkbox" id="vibToggle" checked><span class="sw"></span>Getar (HP)</label>
+        <label class="switch"><input type="checkbox" id="soundToggle" checked><span class="sw"></span>Bunyi (untuk pendamping)</label>
+        <label class="switch"><input type="checkbox" id="swapHands" checked><span class="sw"></span>Tukar kiri/kanan</label>
+      </div>
+      <div class="field">
+        <label for="hold">Waktu Tahan Gestur <span><span id="holdVal">250</span> ms</span></label>
+        <input type="range" id="hold" min="100" max="900" value="250" step="50">
+      </div>
+      <div class="field">
+        <label>Volume (dari tinggi tangan) <b id="spdTxt">–</b></label>
+        <div class="bar"><i id="spdBar"></i></div>
+      </div>
+      <button id="calBtn" class="alt" disabled>Atur tinggi tangan (kalibrasi)</button>
+      <div id="calMsg"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Chord yang dimainkan</h2>
     <div class="pitchRow">
       <div id="hMeter" aria-label="Tinggi tangan: rendah, sedang, tinggi">
-        <div class="band" data-z="2">TINGGI</div>
-        <div class="band" data-z="1">SEDANG</div>
-        <div class="band" data-z="0">RENDAH</div>
+        <div class="band" data-z="2">Tinggi</div>
+        <div class="band" data-z="1">Sedang</div>
+        <div class="band" data-z="0">Rendah</div>
         <div id="hDot"></div>
       </div>
       <div id="chordBig"><span id="chordName">—</span><span id="chordReg"></span></div>
     </div>
     <div id="chordNotes"></div>
-    <div id="piano"></div>
+    <div class="shell"><div id="piano"></div></div>
     <canvas id="wave"></canvas>
     <div class="cap">Gelombang lebar = nada rendah • rapat = nada tinggi • tinggi gelombang = keras</div>
-    <div class="legendTitle">Tangan kanan (chord mayor)</div>
-    <div class="legendRow" id="legendRight"></div>
-    <div class="legendTitle">Tangan kiri (chord lain)</div>
-    <div class="legendRow" id="legendLeft"></div> 
-    <p style="color:var(--muted);margin:10px 0 0">
-      Tahan jumlah jari tertentu sebentar untuk membunyikan chord. Kepalan = diam.
-      Kedua tangan boleh dipakai bergantian. Dua hal berbeda: <b>tinggi tangan</b> menentukan tinggi-rendah nada (rendah, sedang, tinggi), sedangkan <b>kecepatan mengangkat tangan</b> menentukan volume (lembut, sedang, keras). Angkat tangan dari rendah ke tinggi sambil tetap menahan gestur yang sama untuk membunyikan ketiga nada beruntun tanpa jeda panjang.
-      Opsi "Tukar kiri/kanan" sudah dicentang otomatis. Jika kiri dan kanan justru terbalik di perangkatmu, hilangkan centangnya.
-    </p>
+
+    <div class="legends">
+      <h2>Peta gestur</h2>
+      <div class="legendTitle">Tangan kanan (chord mayor)</div>
+      <div class="legendRow" id="legendRight"></div>
+      <div class="legendTitle">Tangan kiri (chord lain)</div>
+      <div class="legendRow" id="legendLeft"></div>
+      <p class="quick">Tahan jumlah jari sebentar untuk membunyikan chord. Kepalan berarti diam.</p>
+      <details class="how">
+        <summary>Cara bermain selengkapnya</summary>
+        <p>
+          Tahan jumlah jari tertentu sebentar untuk membunyikan chord. Kepalan = diam.
+          Kedua tangan boleh dipakai bergantian. <b>Tinggi tangan</b> menentukan nada sekaligus cara menekan: tangan <b>rendah</b> = nada rendah, ditekan pelan dan lembut; tangan <b>sedang</b> = nada sedang, lebih kencang; tangan <b>tinggi</b> = nada tinggi, ditekan cepat dan keras. Chord berbunyi terus selama gestur ditahan, jadi makin lama jarimu bertahan, makin lama chord ditekan. Chord berhenti saat gestur diganti, tangan dikepal, atau tangan keluar dari kamera. Chord tidak berulang selama tetap di gestur dan tinggi yang sama. Angkat atau turunkan tangan dengan gestur yang sama untuk berpindah rendah, sedang, dan tinggi tanpa jeda panjang.
+        </p>
+        <p>
+          Opsi "Tukar kiri/kanan" sudah dicentang otomatis. Jika kiri dan kanan justru terbalik di perangkatmu, hilangkan centangnya.
+        </p>
+      </details>
+    </div>
   </section>
 
 </main>
@@ -147,7 +331,7 @@ const FINGER_LABEL = {0:"Kepalan",1:"1 jari",2:"2 jari",3:"3 jari",4:"4 jari",5:
 const HAND_LABEL = { right:"kanan", left:"kiri" };
 const SIDES = ["right", "left"];
 // Jeda minimum antar bunyi (ms)
-const GAP_NEW = 250, GAP_ZONE = 180, GAP_REPEAT = 1200;
+const GAP_NEW = 250, GAP_ZONE = 180;
 
 const $ = id => document.getElementById(id);
 
@@ -156,7 +340,7 @@ for (const side of SIDES) {
   const row = $(side === "right" ? "legendRight" : "legendLeft");
   CHORDS.filter(c => c.hand === side).forEach(c => {
     const d = document.createElement("div");
-    d.style.background = c.color;
+    d.style.background = c.color; d.dataset.id = c.id;
     d.innerHTML = `<b>${c.id}</b><small>${FINGER_LABEL[c.n]}</small>`;
     row.appendChild(d);
   });
@@ -183,34 +367,58 @@ function initAudio() {
   master.connect(comp); comp.connect(ctx.destination);
 }
 // mult = pengali oktaf dari tinggi tangan (0.5 rendah, 1 sedang, 2 tinggi)
-// vel  = volume dari kecepatan angkat (0.3 lembut ... 1 keras)
+// vel  = volume dari tinggi tangan (rendah 0.3 lembut, sedang 0.65, tinggi 1 keras)
 // Lembut: pelan, redup (tinggi frekuensi disaring), awal bunyi halus.
 // Keras : kencang, terang (banyak nada atas), awal bunyi tajam.
 // REG_GAIN mengimbangi telinga kita yang kurang peka pada nada rendah.
-const REG_GAIN = [1.7, 1, 0.8];
+// Nada TERUS BERBUNYI selama gestur ditahan dan baru berhenti saat release() dipanggil.
+const REG_GAIN = [1.8, 1, 0.8];
+const FADE_LOW = 4;   // detik: nada rendah memudar (tapi tidak sampai hilang total)
+const LOW_FLOOR = 0.35; // nada rendah tetap terdengar di 35% volume puncak
 function playChord(chord, vel, mult = 1, zone = 1) {
-  if (!ctx) return;
+  if (!ctx) return null;
   const now = ctx.currentTime;
-  const peak = 0.24 * Math.pow(vel, 1.7) * REG_GAIN[zone];
+  // Nada rendah: volume efektif dinaikkan supaya tetap terdengar di speaker kecil (HP/laptop)
+  const ev = zone === 0 ? Math.max(vel, 0.5) : vel;
+  const peak = 0.24 * Math.pow(ev, 1.7) * REG_GAIN[zone];
+  const sustain = peak * 0.7;                       // tingkat suara saat chord ditahan
   const attack = 0.045 - 0.037 * vel;               // 0.04 dtk (lembut) .. 0.008 dtk (keras)
-  const decay = 1.3 + 0.5 * vel;
   const lp = ctx.createBiquadFilter(); lp.type = "lowpass";
-  lp.frequency.value = (700 + 6000 * vel) * Math.max(1, mult); lp.Q.value = 0.7;
+  lp.frequency.value = (700 + 6000 * ev) * Math.max(1, mult); lp.Q.value = 0.7;
   lp.connect(master);
+  const gains = [], oscs = [];
   chord.notes.forEach((n, i) => {
-    const f = NOTE_FREQ[n] * (i === 0 ? 0.5 : 1) * mult;
+    // Nada rendah: bass tidak diturunkan lagi (speaker kecil tidak bisa memutar di bawah ~100 Hz)
+    const f = NOTE_FREQ[n] * (i === 0 && zone !== 0 ? 0.5 : 1) * mult;
     const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain();
-    o1.type = "triangle"; o2.type = "sine";
+    o1.type = zone === 0 ? "sawtooth" : "triangle"; o2.type = "sine";   // sawtooth kaya nada atas, jadi terdengar walau speaker lemah
     o1.frequency.value = f; o2.frequency.value = f * 2;
     g.gain.setValueAtTime(0.0001, now);
     g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), now + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+    if (zone === 0) g.gain.exponentialRampToValueAtTime(Math.max(peak * LOW_FLOOR, 0.0002), now + attack + FADE_LOW);   // rendah: memudar pelan
+    else g.gain.exponentialRampToValueAtTime(Math.max(sustain, 0.0002), now + attack + 0.5); // sedang/tinggi: bertahan
     o1.connect(g); o2.connect(g); g.connect(lp);
-    o1.start(now); o2.start(now); o1.stop(now + decay + 0.1); o2.stop(now + decay + 0.1);
+    o1.start(now); o2.start(now);
+    gains.push(g); oscs.push(o1, o2);
   });
+  let done = false;
+  return {
+    release(rel = 0.25) {
+      if (done) return; done = true;
+      const t = ctx.currentTime;
+      gains.forEach(g => {
+        const cur = Math.max(g.gain.value, 0.0001);
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(cur, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + rel);
+      });
+      oscs.forEach(o => { try { o.stop(t + rel + 0.05); } catch {} });
+      setTimeout(() => { try { lp.disconnect(); } catch {} }, (rel + 0.3) * 1000);
+    }
+  };
 }
 // Gelombang buatan yang tidak bergantung pada suara: rapat = nada tinggi, lebar = nada rendah, tinggi = keras.
-const wave = { amp:0, t0:0, cycles:5, color:"#3b82f6", phase:0 };
+const wave = { amp:0, t0:0, cycles:5, color:"#3b82f6", phase:0, held:false, fade:false, tau:0.6, lastA:0 };
 function drawWave() {
   const c = $("wave"), g = c.getContext("2d");
   const fit = () => { c.width = c.clientWidth * devicePixelRatio; c.height = c.clientHeight * devicePixelRatio; };
@@ -220,7 +428,11 @@ function drawWave() {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     const W = c.width, H = c.height, mid = H / 2;
     g.fillStyle = "#0c0f15"; g.fillRect(0, 0, W, H);
-    const a = wave.amp * Math.exp(-((now - wave.t0) / 1000) / 0.6);
+    const tw = (now - wave.t0) / 1000;
+    const a = wave.held ? (wave.fade ? wave.amp * Math.exp(-tw / 1.3)                 // nada rendah: gelombang menghilang
+                                     : wave.amp * (0.8 + 0.2 * Math.exp(-tw / 0.4))) // ditahan: gelombang tetap
+                        : wave.amp * Math.exp(-tw / wave.tau);           // dilepas: memudar
+    wave.lastA = a;
     wave.phase += dt * wave.cycles * 2.2;
     g.lineWidth = 3 * devicePixelRatio; g.strokeStyle = a > 0.03 ? wave.color : "#2a3142"; g.beginPath();
     const A = mid * 0.7 * Math.max(a, 0.012);
@@ -235,7 +447,8 @@ function drawWave() {
 drawWave();
 
 // ---------- Umpan balik visual/getar ----------
-// Tinggi tangan -> nada rendah/sedang/tinggi. Kecepatan angkat tangan -> lembut/sedang/keras.
+// Tinggi tangan -> nada rendah/sedang/tinggi sekaligus tekanan: rendah = pelan, sedang = lebih kencang, tinggi = cepat dan keras.
+const ZONE_VEL = [0.3, 0.65, 1.0];
 const REG = [
   { name:"RENDAH", arrow:"▼", mult:0.5, pat:[220],                  cycles:2.5, bright:0.7  },
   { name:"SEDANG", arrow:"●", mult:1,   pat:[90, 70, 90],            cycles:5,   bright:1    },
@@ -262,18 +475,177 @@ function showChord(chord, vel, reg) {
     el.style.setProperty("--hl", chord.color);
   });
   wave.color = chord.color; wave.amp = vel; wave.t0 = performance.now(); wave.cycles = R.cycles;
+  const side = reg && reg.side;
+  wave.held = !!side; wave.tau = 0.6; wave.fade = zone === 0;
   // Getar: nada tinggi = denyut pendek dan rapat, nada rendah = satu denyut panjang. Keras = denyut lebih panjang.
+  // Setelah ciri denyut, getar menerus selama gestur ditahan (dihentikan saat dilepas).
   const k = 0.7 + 0.6 * vel;
   const pattern = R.pat.map(x => Math.round(x * k));
-  if ($("vibToggle").checked && navigator.vibrate) navigator.vibrate(pattern);
-  if ($("soundToggle").checked) playChord(chord, vel, R.mult, zone);
+  if (side) stopVoice(side, 0.12, true);            // ganti chord/zona di tangan yang sama
+  let tail = [60, 30000];                           // sedang/tinggi: getar menerus selama ditahan
+  if (zone === 0) {                                 // rendah: denyut makin pendek dan jarang sampai berhenti
+    tail = [];
+    for (let on = 200, off = 70, tot = 0; on >= 25 && tot < 3500; on *= 0.78, off *= 1.3) { tail.push(Math.round(off), Math.round(on)); tot += off + on; }
+  }
+  if ($("vibToggle").checked && navigator.vibrate) navigator.vibrate(side ? [...pattern, ...tail] : pattern);
+  const h = $("soundToggle").checked ? playChord(chord, vel, R.mult, zone) : null;
+  if (side) {
+    voices[side] = { h, t0: performance.now(), vel, zone };
+    shown = { side, R, chord };
+  }
 }
+
+// Suara yang sedang ditahan per tangan
+const voices = { right: null, left: null };
+let shown = null;
+function stopVoice(side, rel = 0.25, silent = false) {
+  const v = voices[side]; if (!v) return;
+  voices[side] = null;
+  if (v.h) v.h.release(rel);
+  if (silent) return;
+  if (practice) practice.lastHit = null;
+  if (navigator.vibrate && !voices.right && !voices.left) navigator.vibrate(0);
+  if (shown && shown.side === side) {
+    document.querySelectorAll(".key.on").forEach(k => { k.classList.remove("on"); k.style.filter = ""; });
+    wave.amp = wave.lastA; wave.t0 = performance.now(); wave.held = false; wave.tau = 0.25;
+    const dur = ((performance.now() - v.t0) / 1000).toFixed(1);
+    $("chordReg").textContent = `${shown.R.arrow} NADA ${shown.R.name} • DILEPAS (tertahan ${dur} dtk)`;
+    shown = null;
+  }
+}
+const stopAllVoices = () => { stopVoice("right"); stopVoice("left"); };
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopAllVoices(); });
+const RELEASE_GRACE = 200;   // ms gestur boleh goyah sebelum dianggap dilepas
+const LOST_GRACE = 300;      // ms tangan boleh hilang dari kamera sebelum dianggap dilepas
+const MAX_HOLD = 60000;      // ms, pengaman supaya suara tidak menyala terus bila pelacakan macet
+const lostAt = { right: 0, left: 0 };
+
+// ---------- Mode latihan lagu ----------
+// Urutan chord memakai kunci gitar sederhana yang umum dipakai untuk lagu ini (Do = C). Versi lain bisa sedikit berbeda.
+// Tiap bagian ditulis sebagai deret chord; chord yang sama berurutan digabung jadi satu langkah (ditahan lebih lama).
+const SONGS = {
+  kartini: {
+    title: "Ibu Kita Kartini (W.R. Supratman)",
+    info: "Nada dasar Do = C (C mayor) • birama 4/4 • hanya memakai 5 chord: C, F, G (tangan kanan) dan Am, Dm (tangan kiri).",
+    parts: [
+      ["Intro",        "Dm G C Am Dm G C"],
+      ["Bait 1",       "C C F G C Dm G C Am Dm G C"],
+      ["Bait 2",       "C C F G C Dm G C Am Dm G C"],
+      ["Reff",         "F C Am Dm G C F C Am Dm G C"],
+      ["Instrumen",    "C C F G C Dm G C Am Dm G C"],
+      ["Bait 3",       "C C F G C Dm G C Am Dm G C"],
+      ["Reff (akhir)", "F C Am Dm G C F C Am Dm G C F C Am Dm G C"],
+      ["Penutup",      "C"],
+    ],
+  },
+};
+function buildSteps(song) {
+  const steps = [];
+  song.parts.forEach(([part, line], pi) => {
+    line.split(/\s+/).forEach(id => {
+      if (!byId[id]) throw new Error("Chord tidak dikenal: " + id);
+      const last = steps[steps.length - 1];
+      if (last && last.id === id) { last.rep++; if (!last.pis.includes(pi)) { last.pis.push(pi); last.parts.push(part); } }
+      else steps.push({ id, rep: 1, parts: [part], pis: [pi] });
+    });
+  });
+  return steps;
+}
+const chordHow = c => `Tangan ${HAND_LABEL[c.hand].toUpperCase()} • ${FINGER_LABEL[c.n]}`;
+const dotsHTML = c => Array.from({ length: 5 }, (_, i) =>
+  `<span class="dot${i < c.n ? " on" : ""}"${i < c.n ? ` style="background:${c.color}"` : ""}></span>`).join("");
+const flash = (el, cls) => { el.classList.remove("pop", "shake"); void el.offsetWidth; el.classList.add(cls); };
+let practice = null;
+Object.entries(SONGS).forEach(([k, v]) => { const o = document.createElement("option"); o.value = k; o.textContent = v.title; $("songSel").appendChild(o); });
+
+function practiceRender() {
+  const p = practice, big = $("prBig");
+  document.querySelectorAll("#legendRight div, #legendLeft div").forEach(d =>
+    d.classList.toggle("target", !!p && !p.done && d.dataset.id === p.steps[p.i].id));
+  if (!p) {
+    big.textContent = "—"; big.style.background = "#222a3a"; big.style.color = "var(--fg)";
+    $("prHow").textContent = 'Pilih lagu lalu tekan "Mulai latihan".';
+    for (const id of ["prDots", "prNotes", "prSide", "prChips", "prSections", "prNextHow", "prMsg", "prInfo", "prStep"]) $(id).innerHTML = "";
+    $("prNextChord").textContent = "—"; $("prNextChord").style.background = ""; $("prNextChord").style.color = "";
+    $("prHit").textContent = "0"; $("prMiss").textContent = "0"; $("prAcc").textContent = "–"; $("prBar").style.width = "0%";
+    return;
+  }
+  const N = p.steps.length, cur = p.done ? null : p.steps[p.i];
+  $("prInfo").textContent = p.song.info;
+  $("prBar").style.width = Math.round(p.i / N * 100) + "%";
+  $("prHit").textContent = p.hits; $("prMiss").textContent = p.tries - p.hits;
+  $("prAcc").textContent = p.tries ? Math.round(p.hits / p.tries * 100) + "%" : "–";
+  $("prStep").textContent = p.done ? `${N} / ${N}` : `Langkah ${p.i + 1} / ${N}`;
+  const first = cur ? Math.min(...cur.pis) : Infinity;
+  $("prSections").innerHTML = p.song.parts.map(([name], idx) =>
+    `<span class="sec${!cur ? " done" : cur.pis.includes(idx) ? " cur" : idx < first ? " done" : ""}">${name}</span>`).join("");
+  if (p.done) {
+    const acc = p.tries ? Math.round(p.hits / p.tries * 100) : 100;
+    big.textContent = "✓"; big.style.background = "#34d399"; big.style.color = "#10131a";
+    $("prHow").textContent = "Selesai! Kamu memainkan semua chord.";
+    $("prDots").innerHTML = ""; $("prNotes").innerHTML = "";
+    $("prSide").textContent = `Ketepatan ${acc}% (${p.hits} benar dari ${p.tries} percobaan). Tekan "Ulangi dari awal" untuk berlatih lagi.`;
+    $("prChips").innerHTML = "";
+    $("prNextChord").textContent = "🎉"; $("prNextChord").style.background = ""; $("prNextChord").style.color = ""; $("prNextHow").textContent = "";
+  } else {
+    const c = byId[cur.id], nx = p.steps[p.i + 1] && byId[p.steps[p.i + 1].id];
+    big.textContent = c.id; big.style.background = c.color; big.style.color = "#10131a";
+    $("prHow").textContent = chordHow(c);
+    $("prDots").innerHTML = dotsHTML(c);
+    $("prNotes").innerHTML = '<span class="lbl">Nada</span>' + c.notes.map(n => `<span class="npill">${n}</span>`).join("");
+    $("prSide").textContent = cur.parts.join(" → ") + (cur.rep > 1 ? ` • tahan lebih lama (×${cur.rep})` : "");
+    const nc = $("prNextChord");
+    if (nx) { nc.textContent = nx.id; nc.style.background = nx.color; nc.style.color = "#10131a"; $("prNextHow").textContent = chordHow(nx); }
+    else { nc.textContent = "Selesai"; nc.style.background = ""; nc.style.color = ""; $("prNextHow").textContent = "chord terakhir"; }
+    const from = Math.max(0, p.i - 2), to = Math.min(N, p.i + 9);
+    $("prChips").innerHTML = p.steps.slice(from, to).map((x, j) => {
+      const idx = from + j, cc = byId[x.id];
+      return `<span class="chip${idx < p.i ? " done" : idx === p.i ? " cur" : ""}" style="background:${cc.color}">${cc.id}</span>`;
+    }).join("");
+  }
+  const m = $("prMsg"); m.textContent = p.msg; m.className = p.msg ? (p.msgOk ? "ok" : "bad") : "";
+  if (p.flash) { flash(p.flash === "ok" ? big : $("prTarget"), p.flash === "ok" ? "pop" : "shake"); p.flash = null; }
+}
+function practiceStart() {
+  const song = SONGS[$("songSel").value];
+  practice = { song, steps: buildSteps(song), i: 0, tries: 0, hits: 0, lastHit: null, done: false, msg: "", msgOk: true };
+  practice.msg = $("startBtn").disabled ? "Bunyikan chord yang diminta. Chord berikutnya muncul otomatis saat kamu benar."
+                                        : 'Tekan "Mulai Kamera" dulu, lalu bunyikan chord yang diminta.';
+  $("prStart").textContent = "Ulangi dari awal";
+  practiceRender();
+}
+function practiceStop() { practice = null; $("prStart").textContent = "Mulai latihan"; practiceRender(); }
+function practiceCheck(c) {
+  const p = practice;
+  if (!p || p.done) return;
+  const target = byId[p.steps[p.i].id];
+  if (c.id === target.id) {
+    p.hits++; p.tries++; p.lastHit = c.id; p.i++;
+    if (p.i >= p.steps.length) { p.done = true; p.msg = "✓ Benar! Lagu selesai."; }
+    else p.msg = `✓ Benar! Berikutnya: ${p.steps[p.i].id}`;
+    p.msgOk = true; p.flash = "ok";
+  } else if (c.id === p.lastHit) {
+    return;   // pindah tinggi tangan dengan chord yang sama, bukan kesalahan
+  } else {
+    p.tries++; p.msgOk = false; p.flash = "bad";
+    p.msg = `✗ Yang berbunyi: ${c.id} (${chordHow(c).toLowerCase()}). Yang diminta: ${target.id} (${chordHow(target).toLowerCase()}).`;
+  }
+  practiceRender();
+}
+$("prStart").onclick = practiceStart;
+$("prStop").onclick = practiceStop;
+$("practiceBtn").onclick = () => {
+  const card = $("practiceCard");
+  card.hidden = !card.hidden;
+  if (card.hidden) practiceStop();
+};
 
 // ---------- Parameter tangan: tinggi dan kecepatan angkat ----------
 const CAL_KEY = "signchord_cal";
 let CAL = { yLow: 0.8, yHigh: 0.3 };   // posisi y pergelangan (0 = atas bingkai) saat tangan terendah dan tertinggi
 try { const c = JSON.parse(localStorage.getItem(CAL_KEY) || "null"); if (c && c.yLow - c.yHigh > 0.15) CAL = c; } catch {}
-const SPEED_FAST = 1.2;                // tinggi bingkai per detik yang dianggap "angkat cepat"
+const SPEED_FAST = 1.2;                // (tidak dipakai lagi untuk volume)
+//                 // tinggi bingkai per detik yang dianggap "angkat cepat"
 const heightNorm = y => Math.min(1, Math.max(0, (CAL.yLow - y) / (CAL.yLow - CAL.yHigh)));
 // Zona dengan histeresis supaya tidak bolak-balik di dekat batas
 function zoneOf(h, prev) {
@@ -294,10 +666,10 @@ function liftSpeed(buf) {
   return best;
 }
 const velFromSpeed = v => 0.3 + 0.7 * Math.min(1, Math.max(0, v) / SPEED_FAST);
-function setLive(zone, sp) {
+function setLive(zone) {
   document.querySelectorAll("#hMeter .band").forEach(el => el.classList.toggle("live", Number(el.dataset.z) === zone));
-  $("spdBar").style.width = Math.round(Math.min(1, Math.max(0, sp) / SPEED_FAST) * 100) + "%";
-  $("spdTxt").textContent = dynName(velFromSpeed(sp));
+  $("spdBar").style.width = Math.round(ZONE_VEL[zone] * 100) + "%";
+  $("spdTxt").textContent = dynName(ZONE_VEL[zone]);
 }
 
 // Kalibrasi: pengguna menunjukkan tangan terendah dan tertinggi yang nyaman baginya
@@ -337,7 +709,7 @@ function countFingers(lm) {
 // Berbasis waktu, bukan jumlah frame, jadi tetap bekerja walau kamera lambat (FPS rendah).
 // Gestur dianggap stabil bila bertahan holdMs. Salah baca singkat (kurang dari "grace") diabaikan.
 const newHandState = () => ({ cand: null, candStart: 0, glitchStart: null, glitchN: null,
-                              lastTriggered: null, lastTriggerTime: 0, lastZone: null, ys: [], hS: null, zone: null });
+                              lastTriggered: null, lastTriggerTime: 0, lastZone: null, playN: null, lastSame: 0, ys: [], hS: null, zone: null });
 const hs = { right: newHandState(), left: newHandState() };
 function stableGesture(s, n, t, holdMs) {
   const grace = Math.min(120, holdMs * 0.3);
@@ -432,7 +804,12 @@ function loop() {
     for (const side of SIDES) {
       const f = found[side], s = hs[side];
       const name = side === "right" ? "Kanan" : "Kiri";
-      if (!f) { hs[side] = newHandState(); parts.push(`${name}: tidak terlihat`); continue; }
+      if (!f) {
+        if (!lostAt[side]) lostAt[side] = now;
+        if (now - lostAt[side] > LOST_GRACE) { stopVoice(side); hs[side] = newHandState(); }   // tangan hilang = dilepas
+        parts.push(`${name}: tidak terlihat`); continue;
+      }
+      lostAt[side] = 0;
       const n = countFingers(f.lm);
       // Parameter tangan: tinggi pergelangan (sudah dihaluskan) dan kecepatan angkat
       const y = f.lm[0].y;
@@ -445,13 +822,19 @@ function loop() {
       const live = byKey[side + n];
       drawHand(f.lm, side, name);
       parts.push(`${name}: ${FINGER_LABEL[n]}${live ? " → " + live.id : " (diam)"}`);
+      // Lepas chord bila gestur berubah (atau dikepal) lebih dari masa toleransi
+      const v = voices[side];
+      if (v) {
+        if (n === s.playN) s.lastSame = now;
+        if (now - s.lastSame > RELEASE_GRACE || now - v.t0 > MAX_HOLD) stopVoice(side);
+      }
       const g = stableGesture(s, n, now, holdMs);
       const since = now - s.lastTriggerTime;
       let fire = null;
       if (g !== null) {
         if (g !== s.lastTriggered) fire = since > GAP_NEW;                    // chord/gestur lain
         else if (s.zone !== s.lastZone) fire = since > GAP_ZONE;               // gestur sama, tinggi tangan beda
-        else fire = since > GAP_REPEAT;                                        // gestur sama, tinggi sama (ulang)
+        else fire = false;                                                     // gestur & tinggi sama: tidak diulang
         if (fire) fire = g;
       } else if (live && n === s.lastTriggered && s.zone !== s.lastZone && since > GAP_ZONE) {
         fire = n;   // pindah rendah/sedang/tinggi sambil menahan gestur yang sama: langsung bunyi, tanpa tahan ulang
@@ -459,17 +842,24 @@ function loop() {
       if (fire !== null && fire !== false) {
         s.lastTriggered = fire; s.lastTriggerTime = now; s.lastZone = s.zone; s.cand = null;
         const c = byKey[side + fire];
-        const vel = $("speedToggle").checked ? velFromSpeed(liftSpeed(s.ys)) : 0.8;
-        if (c) showChord(c, vel, { zone: s.zone, h });
+        const vel = ZONE_VEL[s.zone];
+        if (c) { showChord(c, vel, { zone: s.zone, h, side }); s.playN = fire; s.lastSame = now; practiceCheck(c); }
+        else s.playN = null;
       }
     }
     if (primary) {
       if (calib.phase) calib.samples.push(primary.s.hS);
       $("hDot").style.top = ((1 - primary.h) * 100) + "%"; $("hDot").style.opacity = 1;
-      setLive(primary.s.zone, liftSpeed(primary.s.ys));
+      setLive(primary.s.zone);
     } else {
       $("hDot").style.opacity = 0;
       document.querySelectorAll("#hMeter .band.live").forEach(el => el.classList.remove("live"));
+    }
+    // Tampilkan lama chord ditahan
+    if (shown && voices[shown.side]) {
+      const sec = ((now - voices[shown.side].t0) / 1000).toFixed(1);
+      const t2 = `${shown.R.arrow} NADA ${shown.R.name} • VOLUME ${dynName(voices[shown.side].vel)} • DITAHAN ${sec} dtk${voices[shown.side].zone === 0 ? " • memudar" : ""}`;
+      if ($("chordReg").textContent !== t2) $("chordReg").textContent = t2;
     }
     const txt = parts.join("   •   ") + `   •   ${Math.round(fpsEma)} fps`;
     if (txt !== lastStatus) { $("status").textContent = txt; lastStatus = txt; }
